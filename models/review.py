@@ -1,19 +1,20 @@
 #!/usr/bin/python3
 """
 0x00. AirBnB clone - The console
-City module
+Review module
 """
 from models.base_model import BaseModel
 
 
-class City(BaseModel):
+class Review(BaseModel):
     """
-    Defines attributes/methods for the City class, subclass of BaseModel
+    Defines attributes/methods for the Review class, subclass of BaseModel
     Other attributes/methods are inherited from BaseModel
     """
 
-    state_id = ""
-    name = ""
+    place_id = ""
+    user_id = ""
+    text = ""
 
     # def __init__(self, *args, **kwargs):
     #     """initialize variables and methods"""
