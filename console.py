@@ -1,233 +1,147 @@
 #!/usr/bin/python3
+"""The command interpreter for the Back-End"""
+
 import cmd
-from models import *
+import models
+from shlex import split
+from models.user import User
+from models.state import State
+from models.city import City
+from models.amenity import Amenity
+from models.place import Place
+from models.review import Review
+from models.base_model import BaseModel
+from models.engine.file_storage import FileStorage
 
 
 class HBNBCommand(cmd.Cmd):
-    prompt = '(hbnb)'
-    storage.reload()
-
-    valid_classes = ["BaseModel", "User", "State",
-                     "City", "Amenity", "Place", "Review"]
-
-    def emptyline(self):
-        pass
+    """Class for the command interpreter"""
+    prompt = "(hbnb) "
+    allowed_obj = ["BaseModel",
+                   "User",
+                   "Amenity",
+                   "City",
+                   "Place",
+                   "Review",
+                   "State"]
 
     def do_quit(self, args):
-        """Quit command to exit the program"""
-        quit()
+        """Quit command to exit the program\n"""
+        raise SystemExit
 
     def do_EOF(self, args):
-        """Ctrl + D to exit program"""
-        print("")
+        """Handles end of file"""
         return True
 
+    def do_help(self, args):
+        """help"""
+        cmd.Cmd.do_help(self, args)
+
     def do_create(self, args):
-        """Create a new Basemodel"""
-        args = args.split()
-        if len(args) != 1:
-            print("** clas name missing **")
+        """Usage: create <class> <key 1>=<value 2> <key 2>=<value 2> ...
+        Create a new class instance with given keys/values and print its id."""
+        my_list = args.split()
+        if not my_list:
+            print("** class name missing **")
+        elif my_list[0] not in HBNBCommand.allowed_obj:
+            print("** class doesn't exist **")
         else:
-            if len(args) > 0 and args[0] in HBNBCommand.valid_classes:
-                new_obj = eval(args[0])()
-                print(new_obj.id)
-                new_obj.save()
-            else:
-                return
+            my_object = eval(my_list[0] + '()')
+
+            for i in range(1, len(my_list)):
+                res = my_list[i].split('=')
+                res[1] = res[1].replace('_', ' ')
+                setattr(my_object, res[0], res[1])
+
+            my_object.save()
+            print(my_object.id)
+
 
     def do_show(self, args):
-        """Usage: show BaseModel 1234-1234-1234"""
-        args = args.split()
-        if len(args) == 0:
+        """Prints the string representation of an instance
+        based on the class name and id"""
+        list_str = args.split()
+        if not list_str:
             print("** class name missing **")
-            return
-        if len(args) == 1:
-            print("** instance id missing **")
-            return
-        if args[0] not in HBNBCommand.valid_classes:
+        elif list_str[0] not in HBNBCommand.allowed_obj:
             print("** class doesn't exist **")
-            return
-        all_objs = storage.all()
-        for objs_id in all_objs.keys():
-            if objs_id == args[1] and args[0] in str(type(all_objs[objs_id])):
-                print(all_objs[objs_id])
-                return
-        print("** no instance found **")
+        elif len(list_str) == 1:
+            print("** instance id missing **")
+        else:
+            objects = models.storage.all()
+            instance = list_str[0] + '.' + list_str[1]
+            if instance in objects.keys():
+                print(objects[instance])
+            else:
+                print("** no instance found **")
 
     def do_destroy(self, args):
-        """Usage: destroy BaseModel 1234-1234-1234"""
-        args = args.split()
-        if len(args) == 0:
+        """Deletes an instance based on the class name and id
+        (save the change into the JSON file)"""
+        list_str = args.split()
+        if not list_str:
             print("** class name missing **")
-            return
-        if len(args) == 1:
-            print("** instance id missing **")
-            return
-        if args[0] not in HBNBCommand.valid_classes:
+        elif list_str[0] not in HBNBCommand.allowed_obj:
             print("** class doesn't exist **")
-            return
-        all_objs = storage.all()
-        for objs_id in all_objs.keys():
-            if objs_id == args[1] and args[0] in str(type(all_objs[objs_id])):
-                del all_objs[objs_id]
-                storage.save()
-                return
-        print("** no instance found **")
+        elif len(list_str) == 1:
+            print("** instance id missing **")
+        else:
+            objects = models.storage.all()
+            instance = list_str[0] + '.' + list_str[1]
+            if instance in objects.keys():
+                del(objects[instance])
+                models.storage.save()
+            else:
+                print("** no instance found **")
 
     def do_all(self, args):
-        """Usage: all Basemodel or all"""
-        if args not in HBNBCommand.valid_classes and len(args) != 0:
-            print("** class doesn't exist **")
-            return
-        elif args in HBNBCommand.valid_classes:
-            all_objs = {k: v for (k, v) in storage.all().items()
-                        if isinstance(v, eval(args))}
-        elif len(args) == 0:
-            all_objs = storage.all()
+        """Prints all string representation of all instances
+        based or not on the class name"""
+        list_str = args.split()
+        if not args or list_str[0] in HBNBCommand.allowed_obj:
+            str_list = []
+            objects = models.storage.all()
+            for instance in objects.values():
+                str_list.append(instance.__str__())
+            print(str_list)
         else:
-            return
-        for objs_id in all_objs.keys():
-            print(all_objs[objs_id])
+            print("** class doesn't exist **")
 
     def do_update(self, args):
-        """Use: update <class name> <id> <attribute name> <attribute value>"""
-        args = args.split()
-        if len(args) == 0:
+        """Updates an instance based on the class name and id by adding
+        or updating attribute (save the change into the JSON file)"""
+        list_str = args.split()
+        if not list_str:
             print("** class name missing **")
-            return
-        if len(args) == 1:
-            print("** instance id missing **")
-            return
-        if len(args) == 2:
-            print("** attribute name missing **")
-            return
-        if len(args) == 3:
-            print("** value missing **")
-            return
-        if args[0] not in HBNBCommand.valid_classes:
+        elif list_str[0] not in HBNBCommand.allowed_obj:
             print("** class doesn't exist **")
-            return
-        all_objs = storage.all()
-        for obj_id in all_objs.keys():
-            if obj_id == args[1]:
-                setattr(all_objs[obj_id], args[2], args[3])
-                storage.save()
-                return
-        print("** no instance found **")
-
-    def do_User(self, args):
-        """Usages:
-        User.all() - displays all objects of class User
-        User.count() - displays number of objects of class User
-        User.show(<id>) - displays object of class User with id
-        User.destroy(<id>) - deletes object of class User with id
-        User.update(<id>, <attribute name>, <attribute value>) - update User
-        User.update(<id>, <dictionary representation>) - update User
-        """
-        self.class_exec('User', args)
-
-    def do_BaseModel(self, args):
-        """Usages:
-        BaseModel.all() - displays all objects of class BaseModel
-        BaseModel.count() - displays number of objects of class BaseModel
-        BaseModel.show(<id>) - displays object of class BaseModel with id
-        BaseModel.destroy(<id>) - deletes object of class BaseModel with id
-        BaseModel.update(<id>, <attribute name>, <attribute value>) - update
-        BaseModel.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('BaseModel', args)
-
-    def do_State(self, args):
-        """Usages:
-        State.all() - displays all objects of class State
-        State.count() - displays number of objects of class State
-        State.show(<id>) - displays object of class State with id
-        State.destroy(<id>) - deletes object of class BaseModel with id
-        State.update(<id>, <attribute name>, <attribute value>) - update
-        State.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('State', args)
-
-    def do_City(self, args):
-        """Usages:
-        City.all() - displays all objects of class City
-        City.count() - displays number of objects of class City
-        City.show(<id>) - displays object of class City with id
-        City.destroy(<id>) - deletes object of class City with id
-        City.update(<id>, <attribute name>, <attribute value>) - update
-        City.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('City', args)
-
-    def do_Amenity(self, args):
-        """Usages:
-        Amenity.all() - displays all objects of class Amenity
-        Amenity.count() - displays number of objects of class Amenity
-        Amenity.show(<id>) - displays object of class Amenity with id
-        Amenity.destroy(<id>) - deletes object of class Amenity with id
-        Amenity.update(<id>, <attribute name>, <attribute value>) - update
-        Amenity.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('Amenity', args)
-
-    def do_Place(self, args):
-        """Usages:
-        Place.all() - displays all objects of class Place
-        Place.count() - displays number of objects of class Place
-        Place.show(<id>) - displays object of class Place with id
-        Place.destroy(<id>) - deletes object of class Place with id
-        Place.update(<id>, <attribute name>, <attribute value>) - update
-        Place.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('Place', args)
-
-    def do_Review(self, args):
-        """Usages:
-        Review.all() - displays all objects of class Review
-        Review.count() - displays number of objects of class Review
-        Review.show(<id>) - displays object of class Review with id
-        Review.destroy(<id>) - deletes object of class Review with id
-        Review.update(<id>, <attribute name>, <attribute value>) - update
-        Review.update(<id>, <dictionary representation>) - update
-        """
-        self.class_exec('Review', args)
-
-    def class_exec(self, cls_name, args):
-        """Wrapper function for <class name>.action()"""
-        if args[:6] == '.all()':
-            self.do_all(cls_name)
-        elif args[:6] == '.show(':
-            self.do_show(cls_name + ' ' + args[7:-2])
-        elif args[:8] == ".count()":
-            all_objs = {k: v for (k, v) in storage.all().items()
-                        if isinstance(v, eval(cls_name))}
-            print(len(all_objs))
-        elif args[:9] == '.destroy(':
-            self.do_destroy(cls_name + ' ' + args[10:-2])
-        elif args[:8] == '.update(':
-            if '{' in args and '}' in args:
-                new_arg = args[8:-1].split('{')
-                new_arg[1] = '{' + new_arg[1]
-            else:
-                new_arg = args[8:-1].split(',')
-            if len(new_arg) == 3:
-                new_arg = " ".join(new_arg)
-                new_arg = new_arg.replace("\"", "")
-                new_arg = new_arg.replace("  ", " ")
-                self.do_update(cls_name + ' ' + new_arg)
-            elif len(new_arg) == 2:
-                try:
-                    dict = eval(new_arg[1])
-                except:
-                    return
-                for j in dict.keys():
-                    self.do_update(cls_name + ' ' + new_arg[0][1:-3] + ' ' +
-                                   str(j) + ' ' + str(dict[j]))
-            else:
-                return
+        elif len(list_str) == 1:
+            print("** instance id missing **")
+        elif len(list_str) == 2:
+            print("** attribute name missing **")
+        elif len(list_str) == 3:
+            print("** value missing **")
         else:
-            print("Not a valid command")
+            objects = models.storage.all()
+            instance = "{}.{}".format(list_str[0], list_str[1])
+            if instance in objects.keys():
+                for value in objects.values():
+                    try:
+                        attr_type = type(getattr(value, list_str[2]))
+                        list_str[3] = attr_type(list_str[3])
+                    except AttributeError:
+                        pass
+                setattr(value, list_str[2], list_str[3])
+                models.storage.save()
+            else:
+                print("** no instance found **")
+
+    def emptyline(self):
+        '''empty line
+        '''
+        pass
 
 
 if __name__ == '__main__':
     HBNBCommand().cmdloop()
+
