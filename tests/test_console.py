@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+<<<<<<< HEAD
 """
 module test for console
 """
@@ -10,6 +11,12 @@ import os
 import json
 import console
 import tests
+=======
+"""Console unittests"""
+import sys
+import unittest
+from unittest.mock import create_autospec
+>>>>>>> 8d2cfee9d90267d0cc4cb5f26de91162f347e266
 from console import HBNBCommand
 from models.base_model import BaseModel
 from models.user import User
@@ -22,6 +29,7 @@ from models.engine.file_storage import FileStorage
 
 
 class TestConsole(unittest.TestCase):
+<<<<<<< HEAD
     """
     testing the console
     """
@@ -235,4 +243,30 @@ class TestConsole(unittest.TestCase):
 
 
 if __name__ == "__main__":
+=======
+    """class TestConsole"""
+
+    def setUp(self):
+        """set up stdin and stdout"""
+        self.mock_stdin = create_autospec(sys.stdin)
+        self.mock_stdout = create_autospec(sys.stdout)
+
+    def create(self, server=None):
+        """create HBNBCommand"""
+        return HBNBCommand(stdin=self.mock_stdin, stdout=self.mock_stdout)
+
+    def _last_write(self, nr=None):
+        """:return: last `n` output lines"""
+        if nr is None:
+            return self.mock_stdout.write.call_args[0][0]
+        return "".join(map(
+            lambda c: c[0][0], self.mock_stdout.write.call_args_list[-nr:]))
+
+    def test_quit(self):
+        """Tesing `quit` command"""
+        cli = self.create()
+        self.assertTrue(cli.onecmd("quit"))
+
+if __name__ == '__main__':
+>>>>>>> 8d2cfee9d90267d0cc4cb5f26de91162f347e266
     unittest.main()
